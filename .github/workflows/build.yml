@@ -3,6 +3,8 @@ name: Build IPTV Player APK
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - 'build-log.txt'
   workflow_dispatch:
 
 permissions:
@@ -47,29 +49,42 @@ jobs:
       - name: Unpack project
         if: steps.zip.outputs.found == 'true'
         run: |
-          set -e
+          set -eo pipefail
+          LOG="$GITHUB_WORKSPACE/build-log.txt"
+          echo "=== BUILD $(date -u) ===" > "$LOG"
           mkdir -p /tmp/src
           unzip -q "${{ steps.zip.outputs.file }}" -d /tmp/src
           PROJ=$(dirname "$(find /tmp/src -name pubspec.yaml | head -n 1)")
           echo "PROJ=$PROJ" >> "$GITHUB_ENV"
-          echo "Projekt: $PROJ"
-          ls -la "$PROJ"
+          echo "PROJ=$PROJ" | tee -a "$LOG"
+          ls -la "$PROJ" | tee -a "$LOG"
+          find "$PROJ/lib" -name "*.dart" | wc -l | xargs echo "plikow dart:" | tee -a "$LOG"
 
       - name: Generate Android platform
         if: steps.zip.outputs.found == 'true'
+        id: android
+        continue-on-error: true
         working-directory: ${{ env.PROJ }}
         run: |
-          set -e
-          rm -rf android
-          flutter create --platforms=android --org com.damian --project-name iptv_player /tmp/tpl
-          cp -r /tmp/tpl/android ./android
-          python3 tools/patch_android.py
+          set -eo pipefail
+          LOG="$GITHUB_WORKSPACE/build-log.txt"
+          {
+            echo "=== FLUTTER CREATE ==="
+            rm -rf android
+            flutter create --platforms=android --org com.damian --project-name iptv_player /tmp/tpl
+            cp -r /tmp/tpl/android ./android
+            python3 tools/patch_android.py
+          } 2>&1 | tee -a "$LOG"
 
-      - name: Force compileSdk for all plugin modules
+      - name: Patch Gradle
         if: steps.zip.outputs.found == 'true'
+        id: gradle
+        continue-on-error: true
         working-directory: ${{ env.PROJ }}
         run: |
-          set -e
+          set -eo pipefail
+          LOG="$GITHUB_WORKSPACE/build-log.txt"
+          echo "=== PATCH GRADLE ===" >> "$LOG"
           cat >> android/build.gradle << 'GRADLE_EOF'
 
           subprojects {
@@ -91,34 +106,78 @@ jobs:
           GRADLE_EOF
           sed -i 's/^\( *\)compileSdk\(Version\)\? *=\? *.*$/\1compileSdk 34/' android/app/build.gradle
           sed -i 's/^\( *\)targetSdk\(Version\)\? *=\? *.*$/\1targetSdk 34/' android/app/build.gradle
-          echo "----- android/app/build.gradle -----"
-          cat android/app/build.gradle
+          printf '\norg.gradle.jvmargs=-Xmx4096m\nandroid.suppressUnsupportedCompileSdk=34\n' >> android/gradle.properties
+          {
+            echo "--- android/app/build.gradle ---"
+            cat android/app/build.gradle
+            echo "--- android/build.gradle (koniec) ---"
+            tail -20 android/build.gradle
+            echo "--- gradle.properties ---"
+            cat android/gradle.properties
+          } >> "$LOG"
 
-      - name: Build release APK
+      - name: Build APK
         if: steps.zip.outputs.found == 'true'
+        id: build
+        continue-on-error: true
         working-directory: ${{ env.PROJ }}
         run: |
-          set -e
-          flutter pub get
-          echo "----- ANALIZA KODU (informacyjnie) -----"
-          flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos || true
-          echo "----- BUDOWA APK -----"
-          flutter build apk --release --no-shrink
-          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/iptv-player.apk"
-          ls -lh "$GITHUB_WORKSPACE/iptv-player.apk"
+          set -o pipefail
+          LOG="$GITHUB_WORKSPACE/build-log.txt"
+          {
+            echo "=== PUB GET ==="
+            flutter pub get
+            echo "=== ANALYZE ==="
+            flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos || true
+            echo "=== BUILD RELEASE ==="
+            if flutter build apk --release --no-shrink; then
+              cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/iptv-player.apk"
+              echo "RELEASE OK"
+            else
+              echo "=== RELEASE PADL, PROBUJE DEBUG ==="
+              flutter build apk --debug
+              cp build/app/outputs/flutter-apk/app-debug.apk "$GITHUB_WORKSPACE/iptv-player.apk"
+              echo "DEBUG OK"
+            fi
+          } 2>&1 | tee -a "$LOG"
 
-      - name: Upload artifact
-        if: steps.zip.outputs.found == 'true'
+      - name: Save log into repository
+        if: always()
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          if [ ! -f build-log.txt ]; then echo "brak logu" > build-log.txt; fi
+          tail -c 120000 build-log.txt > log-tail.tmp
+          mv log-tail.tmp build-log.txt
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -f build-log.txt
+          git commit -m "log budowy [skip ci]" || echo "nic do commitowania"
+          git push || echo "push nieudany"
+
+      - name: Upload APK artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: iptv-player-apk
           path: iptv-player.apk
+          if-no-files-found: ignore
 
       - name: Publish release
-        if: steps.zip.outputs.found == 'true'
+        if: hashFiles('iptv-player.apk') != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "IPTV Player - build ${{ github.run_number }}"
           body: "Gotowy plik APK do instalacji na Android / Android TV / Fire Stick."
           files: iptv-player.apk
+
+      - name: Report result
+        if: always()
+        run: |
+          if [ -f iptv-player.apk ]; then
+            ls -lh iptv-player.apk
+            echo "APK GOTOWE"
+          else
+            echo "::error::Budowa nieudana - log zapisany w pliku build-log.txt w repozytorium."
+            exit 1
+          fi
