@@ -1,0 +1,296 @@
+=== BUILD Sun Jul 26 22:09:47 UTC 2026 ===
+PROJ=/tmp/src/iptv_player
+total 36
+drwxr-xr-x 5 runner runner 4096 Jul 26 12:30 .
+drwxr-xr-x 3 runner runner 4096 Jul 26 22:09 ..
+drwxr-xr-x 3 runner runner 4096 Jul 13 17:59 .github
+-rw-r--r-- 1 runner runner  296 Jul 26 12:29 .gitignore
+-rw-r--r-- 1 runner runner 4647 Jul 26 12:29 README_PL.md
+drwxr-xr-x 7 runner runner 4096 Jul 13 18:05 lib
+-rw-r--r-- 1 runner runner  920 Jul 13 17:59 pubspec.yaml
+drwxr-xr-x 2 runner runner 4096 Jul 13 17:59 tools
+plikow dart: 32
+=== FLUTTER CREATE ===
+
+  ╔════════════════════════════════════════════════════════════════════════════╗
+  ║                 Welcome to Flutter! - https://flutter.dev                  ║
+  ║                                                                            ║
+  ║ The Flutter tool uses Google Analytics to anonymously report feature usage ║
+  ║ statistics and basic crash reports. This data is used to help improve      ║
+  ║ Flutter tools over time.                                                   ║
+  ║                                                                            ║
+  ║ Flutter tool analytics are not sent on the very first run. To disable      ║
+  ║ reporting, type 'flutter config --no-analytics'. To display the current    ║
+  ║ setting, type 'flutter config'. If you opt out of analytics, an opt-out    ║
+  ║ event will be sent, and then no further information will be sent by the    ║
+  ║ Flutter tool.                                                              ║
+  ║                                                                            ║
+  ║ By downloading the Flutter SDK, you agree to the Google Terms of Service.  ║
+  ║ The Google Privacy Policy describes how data is handled in this service.   ║
+  ║                                                                            ║
+  ║ Moreover, Flutter includes the Dart SDK, which may send usage metrics and  ║
+  ║ crash reports to Google.                                                   ║
+  ║                                                                            ║
+  ║ Read about data we send with crash reports:                                ║
+  ║ https://flutter.dev/to/crash-reporting                                     ║
+  ║                                                                            ║
+  ║ See Google's privacy policy:                                               ║
+  ║ https://policies.google.com/privacy                                        ║
+  ║                                                                            ║
+  ║ To disable animations in this tool, use                                    ║
+  ║ 'flutter config --no-cli-animations'.                                      ║
+  ╚════════════════════════════════════════════════════════════════════════════╝
+
+Creating project ../../tpl...
+Resolving dependencies in `../../tpl`...
+Downloading packages...
+Got dependencies in `../../tpl`.
+Wrote 35 files.
+
+All done!
+You can find general documentation for Flutter at: https://docs.flutter.dev/
+Detailed API documentation is available at: https://api.flutter.dev/
+If you prefer video documentation, consider: https://www.youtube.com/c/flutterdev
+
+In order to run your application, type:
+
+  $ cd ../../tpl
+  $ flutter run
+
+Your application code is in ../../tpl/lib/main.dart.
+
+[OK] Manifest patched: android/app/src/main/AndroidManifest.xml
+[OK] MainActivity patched: android/app/src/main/kotlin/com/damian/iptv_player/MainActivity.kt (package com.damian.iptv_player)
+[DONE] Android platform patched for TV + IPTV streaming.
+=== PATCH GRADLE ===
+--- android/app/build.gradle ---
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.damian.iptv_player"
+    compileSdk 34
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.damian.iptv_player"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = flutter.minSdkVersion
+        targetSdk 34
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+--- android/build.gradle (koniec) ---
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                compileSdkVersion 34
+                if (namespace == null) {
+                    def ns = project.group.toString()
+                    if (!ns.contains(".")) {
+                        ns = "flutter.plugin." + ns.replaceAll("[^A-Za-z0-9_]", "_")
+                    }
+                    namespace ns
+                }
+            }
+        }
+    }
+}
+--- gradle.properties ---
+org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:+HeapDumpOnOutOfMemoryError
+android.useAndroidX=true
+android.enableJetifier=true
+
+org.gradle.jvmargs=-Xmx4096m
+android.suppressUnsupportedCompileSdk=34
+=== PUB GET ===
+Resolving dependencies...
+Downloading packages...
++ archive 4.0.9
++ args 2.7.0
++ async 2.11.0 (2.13.1 available)
++ boolean_selector 2.1.1 (2.1.2 available)
++ cached_network_image 3.4.1
++ cached_network_image_platform_interface 4.1.1
++ cached_network_image_web 1.3.1
++ characters 1.3.0 (1.4.1 available)
++ clock 1.1.1 (1.1.2 available)
++ collection 1.18.0 (1.19.1 available)
++ connectivity_plus 6.1.5 (7.3.1 available)
++ connectivity_plus_platform_interface 2.1.0
++ cross_file 0.3.4+2 (0.3.5+4 available)
++ crypto 3.0.7
++ dbus 0.7.12 (0.7.14 available)
++ dio 5.11.0
++ dio_web_adapter 2.2.1
++ equatable 2.1.0
++ fake_async 1.3.1 (1.3.3 available)
++ ffi 2.1.3 (2.2.0 available)
++ file 7.0.1
++ file_picker 8.3.7 (11.0.2 available)
++ fixnum 1.1.1
++ flutter 0.0.0 from sdk flutter
++ flutter_cache_manager 3.4.1 (3.4.2 available)
++ flutter_lints 4.0.0 (6.0.0 available)
++ flutter_plugin_android_lifecycle 2.0.26 (2.0.35 available)
++ flutter_test 0.0.0 from sdk flutter
++ flutter_web_plugins 0.0.0 from sdk flutter
++ go_router 13.2.5 (17.3.0 available)
++ hive 2.2.3
++ hive_flutter 1.1.0
++ http 1.6.0
++ http_parser 4.0.2 (4.1.2 available)
++ image 4.8.0 (4.9.1 available)
++ intl 0.19.0 (0.20.3 available)
++ leak_tracker 10.0.5 (11.0.2 available)
++ leak_tracker_flutter_testing 3.0.5 (3.0.10 available)
++ leak_tracker_testing 3.0.1 (3.0.2 available)
++ lints 4.0.0 (6.1.0 available)
++ logging 1.3.0
++ matcher 0.12.16+1 (0.12.20 available)
++ material_color_utilities 0.11.1 (0.13.0 available)
++ media_kit 1.2.6
++ media_kit_libs_android_video 1.3.8
++ media_kit_video 1.3.1 (2.0.1 available)
++ meta 1.15.0 (1.19.0 available)
++ mime 2.0.0
++ nested 1.0.0
++ nm 0.5.0
++ octo_image 2.1.0
++ package_info_plus 9.0.1 (10.2.1 available)
++ package_info_plus_platform_interface 3.2.1 (4.1.0 available)
++ path 1.9.0 (1.9.1 available)
++ path_provider 2.1.5 (2.1.6 available)
++ path_provider_android 2.2.15 (2.3.1 available)
++ path_provider_foundation 2.4.1 (2.6.0 available)
++ path_provider_linux 2.2.1 (2.2.2 available)
++ path_provider_platform_interface 2.1.2 (2.1.3 available)
++ path_provider_windows 2.3.0
++ petitparser 6.0.2 (7.0.2 available)
++ platform 3.1.6
++ plugin_platform_interface 2.1.8
++ posix 6.5.2
++ provider 6.1.5+1
++ rxdart 0.28.0
++ safe_local_storage 2.0.6
++ screen_brightness_android 2.1.6
++ screen_brightness_platform_interface 2.1.2
++ shared_preferences 2.5.3 (2.5.5 available)
++ shared_preferences_android 2.4.7 (2.4.27 available)
++ shared_preferences_foundation 2.5.4 (2.5.6 available)
++ shared_preferences_linux 2.4.1
++ shared_preferences_platform_interface 2.4.1 (2.4.2 available)
++ shared_preferences_web 2.4.3
++ shared_preferences_windows 2.4.1
++ sky_engine 0.0.99 from sdk flutter
++ source_span 1.10.0 (1.10.2 available)
++ sqflite 2.4.1 (2.4.3 available)
++ sqflite_android 2.4.0 (2.4.3 available)
++ sqflite_common 2.5.4+6 (2.5.11 available)
++ sqflite_darwin 2.4.1+1 (2.4.3+1 available)
++ sqflite_platform_interface 2.4.0 (2.4.1 available)
++ stack_trace 1.11.1 (1.12.1 available)
++ stream_channel 2.1.2 (2.1.4 available)
++ string_scanner 1.2.0 (1.4.1 available)
++ synchronized 3.3.0+3 (3.4.1+1 available)
++ term_glyph 1.2.1 (1.2.2 available)
++ test_api 0.7.2 (0.7.13 available)
++ typed_data 1.4.0
++ universal_platform 1.1.0
++ uri_parser 3.0.2
++ uuid 4.6.0
++ vector_math 2.1.4 (2.4.1 available)
++ vm_service 14.2.5 (15.2.0 available)
++ volume_controller 3.4.4 (3.6.0 available)
++ wakelock_plus 1.4.0 (1.7.0 available)
++ wakelock_plus_platform_interface 1.3.0 (1.6.0 available)
++ web 1.1.1
++ win32 5.10.1 (6.3.0 available)
++ xdg_directories 1.1.0
++ xml 6.5.0 (7.0.1 available)
+Changed 102 dependencies!
+58 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+=== ANALYZE ===
+Analyzing iptv_player...                                        
+
+  error • The name 'Playlist' is defined in the libraries 'package:iptv_player/models/playlist.dart' and 'package:media_kit/src/models/playlist.dart (via package:media_kit/media_kit.dart)' • lib/main.dart:29:22 • ambiguous_import
+
+1 issue found. (ran in 14.5s)
+=== BUILD RELEASE ===
+
+Running Gradle task 'assembleRelease'...                        
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/tmp/src/iptv_player/android/build.gradle' line: 21
+
+* What went wrong:
+A problem occurred evaluating root project 'android'.
+> Cannot run Project.afterEvaluate(Closure) when the project is already evaluated.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 34s
+Running Gradle task 'assembleRelease'...                           95.3s
+Gradle task assembleRelease failed with exit code 1
+=== RELEASE PADL, PROBUJE DEBUG ===
+
+Running Gradle task 'assembleDebug'...                          
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/tmp/src/iptv_player/android/build.gradle' line: 21
+
+* What went wrong:
+A problem occurred evaluating root project 'android'.
+> Cannot run Project.afterEvaluate(Closure) when the project is already evaluated.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1s
+Running Gradle task 'assembleDebug'...                           1,537ms
+Gradle task assembleDebug failed with exit code 1
