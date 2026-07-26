@@ -1,0 +1,124 @@
+name: Build IPTV Player APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Look for project ZIP
+        id: zip
+        run: |
+          F=$(ls -1 *.zip 2>/dev/null | head -n 1 || true)
+          if [ -z "$F" ]; then
+            echo "::warning::Brak pliku .zip. Wgraj iptv_player.zip."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Znaleziono: $F"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "file=$F" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Java 17
+        if: steps.zip.outputs.found == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        if: steps.zip.outputs.found == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      - name: Unpack project
+        if: steps.zip.outputs.found == 'true'
+        run: |
+          set -e
+          mkdir -p /tmp/src
+          unzip -q "${{ steps.zip.outputs.file }}" -d /tmp/src
+          PROJ=$(dirname "$(find /tmp/src -name pubspec.yaml | head -n 1)")
+          echo "PROJ=$PROJ" >> "$GITHUB_ENV"
+          echo "Projekt: $PROJ"
+          ls -la "$PROJ"
+
+      - name: Generate Android platform
+        if: steps.zip.outputs.found == 'true'
+        working-directory: ${{ env.PROJ }}
+        run: |
+          set -e
+          rm -rf android
+          flutter create --platforms=android --org com.damian --project-name iptv_player /tmp/tpl
+          cp -r /tmp/tpl/android ./android
+          python3 tools/patch_android.py
+
+      - name: Force compileSdk for all plugin modules
+        if: steps.zip.outputs.found == 'true'
+        working-directory: ${{ env.PROJ }}
+        run: |
+          set -e
+          cat >> android/build.gradle << 'GRADLE_EOF'
+
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty("android")) {
+                      project.android {
+                          compileSdkVersion 34
+                          if (namespace == null) {
+                              def ns = project.group.toString()
+                              if (!ns.contains(".")) {
+                                  ns = "flutter.plugin." + ns.replaceAll("[^A-Za-z0-9_]", "_")
+                              }
+                              namespace ns
+                          }
+                      }
+                  }
+              }
+          }
+          GRADLE_EOF
+          sed -i 's/^\( *\)compileSdk\(Version\)\? *=\? *.*$/\1compileSdk 34/' android/app/build.gradle
+          sed -i 's/^\( *\)targetSdk\(Version\)\? *=\? *.*$/\1targetSdk 34/' android/app/build.gradle
+          echo "----- android/app/build.gradle -----"
+          cat android/app/build.gradle
+
+      - name: Build release APK
+        if: steps.zip.outputs.found == 'true'
+        working-directory: ${{ env.PROJ }}
+        run: |
+          set -e
+          flutter pub get
+          echo "----- ANALIZA KODU (informacyjnie) -----"
+          flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos || true
+          echo "----- BUDOWA APK -----"
+          flutter build apk --release --no-shrink
+          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/iptv-player.apk"
+          ls -lh "$GITHUB_WORKSPACE/iptv-player.apk"
+
+      - name: Upload artifact
+        if: steps.zip.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: iptv-player-apk
+          path: iptv-player.apk
+
+      - name: Publish release
+        if: steps.zip.outputs.found == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "IPTV Player - build ${{ github.run_number }}"
+          body: "Gotowy plik APK do instalacji na Android / Android TV / Fire Stick."
+          files: iptv-player.apk
