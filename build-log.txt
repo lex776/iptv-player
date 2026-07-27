@@ -1,4 +1,4 @@
-=== BUILD Sun Jul 26 22:34:23 UTC 2026 ===
+=== BUILD Mon Jul 27 10:15:32 UTC 2026 ===
 PROJ=/tmp/src/iptv_player
 === FIX DART ===
 4:import 'package:media_kit/media_kit.dart' show MediaKit;
@@ -110,8 +110,8 @@ A problem occurred evaluating project ':package_info_plus'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 2m
-Running Gradle task 'assembleRelease'...                          120.8s
+BUILD FAILED in 2m 1s
+Running Gradle task 'assembleRelease'...                          122.4s
 Gradle task assembleRelease failed with exit code 1
 === RELEASE PADL, PROBUJE DEBUG ===
 
@@ -133,5 +133,5 @@ A problem occurred evaluating project ':package_info_plus'.
 > Get more help at https://help.gradle.org.
 
 BUILD FAILED in 1s
-Running Gradle task 'assembleDebug'...                           2,028ms
+Running Gradle task 'assembleDebug'...                           1,995ms
 Gradle task assembleDebug failed with exit code 1
